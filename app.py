@@ -52,7 +52,35 @@ def cadastrarUsuario():
 """, (nome, cpf, nascimento, email, celular, telefone, senha_hash.decode('utf-8')))
         conn.commit()  # COMANDO PARA SALVAR AS MUDANÇAS NO BANCO DE DADOS.
 
-        return jsonify({"Mensagem": "Usuário Cadastrado com sucesso"}), 201
+        return jsonify({"sucesso": "Cadastrado com sucesso"}), 201
+        #return jsonify({"Mensagem": "Usuário Cadastrado com sucesso"}), 201
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    dados = request.get_json()
+    email = dados["email"]
+    senha = dados["senha"]
+
+    with sqlite3.connect("database.db") as conn:
+        conn.row_factory = sqlite3.Row #permite acessar os dados como dicionário
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM CADASTRO WHERE email = ?", (email,))
+        usuario = cursor.fetchone()
+
+        if usuario:
+            senha_hash = usuario["senha"]
+            if bcrypt.checkpw(senha.encode('utf-8'), senha_hash.encode('utf-8')):
+                return jsonify({
+                    "sucesso": True,
+                    "usuario": {
+                        "nome": usuario["nome"],
+                        "email": usuario["email"],
+                        "cpf": usuario["cpf"]
+                    }
+                })
+            return jsonify({"sucesso": False, "mensagem": "Email ou senha inválidos"}), 401
+
 
 
 if __name__ == "__main__":
