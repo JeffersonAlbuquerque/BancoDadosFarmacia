@@ -28,7 +28,7 @@ def bem_vindo():
     return "<h1>Seja bem vindo!</h1>"
 
 
-@app.route("/usuarios", methods=["POST"])
+@app.route("/cadastro", methods=["POST"])
 def cadastrarUsuario():
     dados = request.get_json()
 
