@@ -59,7 +59,7 @@ def cadastrarUsuario():
 @app.route("/usuarios", methods=["GET"])
 def listarUsuarios():
     with sqlite3.connect("database.db") as conn:
-        usuarios = conn.execute("SELECT FROM * CADASTRO").fetchall()
+        usuarios = conn.execute("SELECT * FROM CADASTRO").fetchall()
 
         usuarios_formatados = []
 
