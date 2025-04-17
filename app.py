@@ -53,7 +53,27 @@ def cadastrarUsuario():
         conn.commit()  # COMANDO PARA SALVAR AS MUDANÇAS NO BANCO DE DADOS.
 
         return jsonify({"sucesso": "Cadastrado com sucesso"}), 201
-        #return jsonify({"Mensagem": "Usuário Cadastrado com sucesso"}), 201
+        # return jsonify({"Mensagem": "Usuário Cadastrado com sucesso"}), 201
+
+
+@app.route("/usuarios", methods=["GET"])
+def listarUsuarios():
+    with sqlite3.connect("database.db") as conn:
+        usuarios = conn.execute("SELECT FROM * CADASTRO").fetchall()
+
+        usuarios_formatados = []
+
+        for item in usuarios:
+            usuarios_dicionario = {
+                "nome": item[0],
+                "cpf": item[1],
+                "nascimento": item[2],
+                "email": item[3],
+                "celular": item[4],
+                "telefone": item[5]
+            }
+            usuarios_formatados.append(usuarios_dicionario)
+            return jsonify(usuarios_formatados), 100
 
 
 @app.route("/login", methods=["POST"])
@@ -63,7 +83,7 @@ def login():
     senha = dados["senha"]
 
     with sqlite3.connect("database.db") as conn:
-        conn.row_factory = sqlite3.Row #permite acessar os dados como dicionário
+        conn.row_factory = sqlite3.Row  # permite acessar os dados como dicionário
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM CADASTRO WHERE email = ?", (email,))
         usuario = cursor.fetchone()
@@ -80,7 +100,6 @@ def login():
                     }
                 })
             return jsonify({"sucesso": False, "mensagem": "Email ou senha inválidos"}), 401
-
 
 
 if __name__ == "__main__":
