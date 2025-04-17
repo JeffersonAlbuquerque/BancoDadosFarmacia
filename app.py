@@ -73,7 +73,8 @@ def listarUsuarios():
                 "telefone": item[5]
             }
             usuarios_formatados.append(usuarios_dicionario)
-            return jsonify(usuarios_formatados), 100
+            
+        return jsonify(usuarios_formatados), 100
 
 
 @app.route("/login", methods=["POST"])
