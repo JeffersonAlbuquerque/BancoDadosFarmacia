@@ -59,7 +59,7 @@ def cadastrarUsuario():
 @app.route("/usuarios", methods=["GET"])
 def listarUsuarios():
     with sqlite3.connect("database.db") as conn:
-        usuarios = conn.execute("SELECT * FROM CADASTRO").fetchall()
+        usuarios = conn.execute("SELECT FROM * CADASTRO").fetchall()
 
         usuarios_formatados = []
 
@@ -73,7 +73,7 @@ def listarUsuarios():
                 "telefone": item[5]
             }
             usuarios_formatados.append(usuarios_dicionario)
-            
+
         return jsonify(usuarios_formatados), 100
 
 
@@ -86,7 +86,7 @@ def login():
     with sqlite3.connect("database.db") as conn:
         conn.row_factory = sqlite3.Row  # permite acessar os dados como dicionário
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM CADASTRO WHERE email = ?", (email,))
+        cursor.execute("SELECT FROM * CADASTRO WHERE email = ?", (email,))
         usuario = cursor.fetchone()
 
         if usuario:
