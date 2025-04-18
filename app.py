@@ -59,7 +59,7 @@ def cadastrarUsuario():
 @app.route("/usuarios", methods=["GET"])
 def listarUsuarios():
     with sqlite3.connect("database.db") as conn:
-        usuarios = conn.execute("SELECT FROM * CADASTRO").fetchall()
+        usuarios = conn.execute("SELECT * FROM CADASTRO").fetchall()
 
         usuarios_formatados = []
 
@@ -74,7 +74,7 @@ def listarUsuarios():
             }
             usuarios_formatados.append(usuarios_dicionario)
 
-        return jsonify(usuarios_formatados), 100
+        return jsonify(usuarios_formatados), 200
 
 
 @app.route("/login", methods=["POST"])
@@ -84,9 +84,9 @@ def login():
     senha = dados["senha"]
 
     with sqlite3.connect("database.db") as conn:
-        conn.row_factory = sqlite3.Row  # permite acessar os dados como dicionário
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT FROM * CADASTRO WHERE email = ?", (email,))
+        cursor.execute("SELECT * FROM CADASTRO WHERE email = ?", (email,))
         usuario = cursor.fetchone()
 
         if usuario:
@@ -101,6 +101,8 @@ def login():
                     }
                 })
             return jsonify({"sucesso": False, "mensagem": "Email ou senha inválidos"}), 401
+        else:
+            return jsonify({"sucesso": False, "mensagem": "Usuário não encontrado"}), 404
 
 
 if __name__ == "__main__":
