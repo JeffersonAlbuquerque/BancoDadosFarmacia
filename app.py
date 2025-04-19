@@ -168,7 +168,7 @@ def cadastrarProdutos():
 def listarProdutos():
     with sqlite3.connect("database.db") as conn:
         produtos = conn.execute(
-            "SELECT FROM * PRODUTOS ORDER BY nome ASC").fetchall()
+            "SELECT * FROM PRODUTOS ORDER BY nome ASC").fetchall()
 
         produtos_formatados = []
 
@@ -191,7 +191,7 @@ def listarProdutos():
             }
             produtos_formatados.append(produtos_dicionario)
 
-        return jsonify(usuarios_formatados), 200
+        return jsonify(produtos_formatados), 200
 
 
 @app.route("/deletarProduto/<int:id>", methods=["DELETE"])
@@ -205,8 +205,8 @@ def deletarProduto(id):
 
         conn.execute("DELETE FROM PRODUTOS WHERE id = ?", (id,))
         conn.commit()
-
-    return jsonify({"mensagem": f"produto com ID"{id} "deletado com sucesso!"}), 200
+        
+    return jsonify({"mensagem": f"Produto com ID {id} deletado com sucesso!"}), 200
 
 
 if __name__ == "__main__":
