@@ -129,6 +129,39 @@ def login():
             return jsonify({"sucesso": False, "mensagem": "Usuário não encontrado"}), 404
 
 
+@app.route("/cadastrarCategoria", methods=["POST"])
+def cadastrarCategorias():
+    dados = request.get_json()
+    categoria = dados.get("nome")
+
+    with sqlite3.connect("database.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO CATEGORIA (nome)
+            VALUES (?)
+        """, (categoria,))
+        conn.commit()
+
+    return jsonify({"mensagem": "Categoria cadastrada com sucesso!"}), 201
+
+
+@app.route("/categorias", methods=["GET"])
+def listarCategorias():
+    with sqlite3.connect("database.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nome FROM CATEGORIA ORDER BY nome ASC")
+        categorias = cursor.fetchall()
+
+        categorias_formatadas = []
+        for cat in categorias:
+            categorias_formatadas.append({
+                "id": cat[0],
+                "nome": cat[1]
+            })
+
+    return jsonify(categorias_formatadas), 200
+
+
 @app.route("/cadastrarProdutos", methods=["POST"])
 def cadastrarProdutos():
     dados = request.get_json()
@@ -205,7 +238,6 @@ def deletarProduto(id):
 
         conn.execute("DELETE FROM PRODUTOS WHERE id = ?", (id,))
         conn.commit()
-        
     return jsonify({"mensagem": f"Produto com ID {id} deletado com sucesso!"}), 200
 
 
