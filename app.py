@@ -34,7 +34,7 @@ def init_db():  # inicia o database.
                      preco FLOAT NOT NULL,
                      lote TEXT NOT NULL,
                      validade TEXT NOT NULL,
-                     controlado BOOL
+                     controlado BOOL,
                      FOREIGN KEY (categoria_id) REFERENCES CATEGORIAS(id)
                      )
 """)
@@ -133,9 +133,9 @@ def login():
 def cadastrarProdutos():
     dados = request.get_json()
 
-    image = dados.get("img_url")
+    img_url = dados.get("img_url")
     nome = dados.get("nome")
-    categoria = dados.get("categoria")
+    categoria_id = dados.get("categoria")  # categoria_id agora!
     fabricante = dados.get("fabricante")
     descricao = dados.get("descricao")
     dosagem = dados.get("dosagem")
@@ -147,13 +147,21 @@ def cadastrarProdutos():
     controlado = dados.get("controlado")
 
     with sqlite3.connect("database.db") as conn:
-        conn.execute(f"""
-    INSERT INTO PRODUTOS ("img_url", "nome", "categoria", "fabricante", "descricao",
-        "dosagem", "forma", "quantidade", "preco", "validade", "lote", "controlado")
-                     VALUES("{image}", "{nome}", "{categoria}", "{fabricante}", "{descricao}", "{dosagem}", "{forma}", "{quantidade}", "{preco}", "{validade}", "{lote}" "{controlado}")
-""")
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO PRODUTOS (
+                img_url, nome, categoria_id, fabricante, descricao,
+                dosagem, forma, quantidade, preco, lote, validade, controlado
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            img_url, nome, categoria_id, fabricante, descricao,
+            dosagem, forma, quantidade, preco, lote, validade, controlado
+        ))
+
         conn.commit()
-        return jsonify({"Mensagem": "Remédio cadastrado com sucesso"}), 201
+
+    return jsonify({"mensagem": "Produto cadastrado com sucesso!"}), 201
 
 
 @app.route("/produtosCadastrados", methods=["GET"])
