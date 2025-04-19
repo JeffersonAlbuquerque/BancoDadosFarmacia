@@ -20,6 +20,30 @@ def init_db():  # inicia o database.
                      senha TEXT NOT NULL)
 """)
 
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS PRODUTOS(
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     img_url TEXT NOT NULL,
+                     nome TEXT NOT NULL,
+                     categoria_id INTEGER,
+                     fabricante TEXT, 
+                     descricao TEXT,
+                     dosagem TEXT,
+                     forma TEXT,
+                     quantidade INTEGER NOT NULL,
+                     preco FLOAT NOT NULL,
+                     lote TEXT NOT NULL,
+                     validade TEXT NOT NULL,
+                     controlado BOOL
+                     FOREIGN KEY (categoria_id) REFERENCES CATEGORIAS(id)
+                     )
+""")
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS CATEGORIA(
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     nome TEXT NOT NULL)
+""")
+
 
 init_db()
 
@@ -103,6 +127,78 @@ def login():
             return jsonify({"sucesso": False, "mensagem": "Email ou senha inválidos"}), 401
         else:
             return jsonify({"sucesso": False, "mensagem": "Usuário não encontrado"}), 404
+
+
+@app.route("/cadastrarProdutos", methods=["POST"])
+def cadastrarProdutos():
+    dados = request.get_json()
+
+    image = dados.get("img_url")
+    nome = dados.get("nome")
+    categoria = dados.get("categoria")
+    fabricante = dados.get("fabricante")
+    descricao = dados.get("descricao")
+    dosagem = dados.get("dosagem")
+    forma = dados.get("forma")
+    quantidade = dados.get("quantidade")
+    preco = dados.get("preco")
+    validade = dados.get("validade")
+    lote = dados.get("lote")
+    controlado = dados.get("controlado")
+
+    with sqlite3.connect("database.db") as conn:
+        conn.execute(f"""
+    INSERT INTO PRODUTOS ("img_url", "nome", "categoria", "fabricante", "descricao",
+        "dosagem", "forma", "quantidade", "preco", "validade", "lote", "controlado")
+                     VALUES("{image}", "{nome}", "{categoria}", "{fabricante}", "{descricao}", "{dosagem}", "{forma}", "{quantidade}", "{preco}", "{validade}", "{lote}" "{controlado}")
+""")
+        conn.commit()
+        return jsonify({"Mensagem": "Remédio cadastrado com sucesso"}), 201
+
+
+@app.route("/produtosCadastrados", methods=["GET"])
+def listarProdutos():
+    with sqlite3.connect("database.db") as conn:
+        produtos = conn.execute(
+            "SELECT FROM * PRODUTOS ORDER BY nome ASC").fetchall()
+
+        produtos_formatados = []
+
+        for item in produtos:
+            produtos_dicionario = {
+                "id": item[0],
+                "img_url": item[1],
+                "nome": item[2],
+                "categoria": item[3],
+                "fabricante": item[4],
+                "descricao": item[5],
+                "dosagem": item[6],
+                "forma": item[7],
+                "quantidade": item[8],
+                "preco": item[9],
+                "validade": item[10],
+                "lote": item[11],
+                "controlado": item[12]
+
+            }
+            produtos_formatados.append(produtos_dicionario)
+
+        return jsonify(usuarios_formatados), 200
+
+
+@app.route("/deletarProduto/<int:id>", methods=["DELETE"])
+def deletarProduto(id):
+    with sqlite3.connect("database.db") as conn:
+        cursor = conn.execute("SELECT * FROM PRODUTOS WHERE id = ?", (id,))
+        produto = cursor.fetchone()
+
+        if not produto:
+            return jsonify({"erro": "Produto não encontrado"}), 401
+
+        conn.execute("DELETE FROM PRODUTOS WHERE id = ?", (id,))
+        conn.commit()
+
+    return jsonify({"mensagem": f"produto com ID"{id} "deletado com sucesso!"}), 200
 
 
 if __name__ == "__main__":
