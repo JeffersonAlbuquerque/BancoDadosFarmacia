@@ -21,22 +21,22 @@ def init_db():  # inicia o database.
 """)
 
         conn.execute("""
-        CREATE TABLE IF NOT EXISTS PRODUTOS(
-                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     img_url TEXT NOT NULL,
-                     nome TEXT NOT NULL,
-                     categoria_id INTEGER,
-                     fabricante TEXT, 
-                     descricao TEXT,
-                     dosagem TEXT,
-                     forma TEXT,
-                     quantidade INTEGER NOT NULL,
-                     preco FLOAT NOT NULL,
-                     lote TEXT NOT NULL,
-                     validade TEXT NOT NULL,
-                     controlado BOOL,
-                     FOREIGN KEY (categoria_id) REFERENCES CATEGORIAS(id)
-                     )
+CREATE TABLE IF NOT EXISTS PRODUTOS(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    img_url TEXT NOT NULL,
+    nome TEXT NOT NULL,
+    categoria_id INTEGER,
+    fabricante TEXT, 
+    descricao TEXT,
+    dosagem TEXT,
+    forma TEXT,
+    quantidade INTEGER NOT NULL,
+    preco FLOAT NOT NULL,
+    lote TEXT NOT NULL,
+    validade TEXT NOT NULL,
+    controlado BOOL,
+    FOREIGN KEY (categoria_id) REFERENCES CATEGORIA(id)
+)
 """)
         conn.execute("""
         CREATE TABLE IF NOT EXISTS CATEGORIA(
@@ -200,27 +200,42 @@ def cadastrarProdutos():
 @app.route("/produtosCadastrados", methods=["GET"])
 def listarProdutos():
     with sqlite3.connect("database.db") as conn:
-        produtos = conn.execute(
-            "SELECT * FROM PRODUTOS ORDER BY nome ASC").fetchall()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT 
+                P.id, P.img_url, P.nome, P.fabricante, P.descricao, 
+                P.dosagem, P.forma, P.quantidade, P.preco, 
+                P.lote, P.validade, P.controlado,
+                C.id AS categoria_id, C.nome AS categoria_nome
+            FROM PRODUTOS P
+            LEFT JOIN CATEGORIA C ON P.categoria_id = C.id
+            ORDER BY P.nome ASC
+        """)
+
+        produtos = cursor.fetchall()
 
         produtos_formatados = []
 
         for item in produtos:
             produtos_dicionario = {
-                "id": item[0],
-                "img_url": item[1],
-                "nome": item[2],
-                "categoria": item[3],
-                "fabricante": item[4],
-                "descricao": item[5],
-                "dosagem": item[6],
-                "forma": item[7],
-                "quantidade": item[8],
-                "preco": item[9],
-                "validade": item[10],
-                "lote": item[11],
-                "controlado": item[12]
-
+                "id": item["id"],
+                "img_url": item["img_url"],
+                "nome": item["nome"],
+                "fabricante": item["fabricante"],
+                "descricao": item["descricao"],
+                "dosagem": item["dosagem"],
+                "forma": item["forma"],
+                "quantidade": item["quantidade"],
+                "preco": item["preco"],
+                "lote": item["lote"],
+                "validade": item["validade"],
+                "controlado": item["controlado"],
+                "categoria": {
+                    "id": item["categoria_id"],
+                    "nome": item["categoria_nome"]
+                } if item["categoria_id"] else None
             }
             produtos_formatados.append(produtos_dicionario)
 
