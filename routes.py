@@ -187,7 +187,7 @@ def init_routes(app):  # <- Criando a função init_routes(app)
     def cadastrarProdutos():
         dados = request.get_json()
 
-        if not dados.get("img_url") or not dados.get("nome") or not dados.get("categoria"):
+        if not dados.get("img_url") or not dados.get("nome") or not dados.get("categoria_id"):
             return jsonify({"erro": "Campos obrigatórios faltando: img_url, nome ou categoria"}), 400
 
         if not dados.get("quantidade") or not dados.get("preco") or not dados.get("validade"):
