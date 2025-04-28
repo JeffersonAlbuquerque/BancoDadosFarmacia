@@ -510,14 +510,33 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
 
 def listar_produtos_usuario(usuario_id):
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("""
-        SELECT p.nome, p.preco FROM produtos p
-        JOIN carrinho c ON p.id = c.produto_id
-        WHERE c.usuario_id = ?""", (usuario_id,))
-        produtos = cursor.fetchall()
-        return produtos
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT p.id, p.nome, p.preco, ip.quantidade
+        FROM ITENS_PEDIDO ip
+        JOIN PRODUTOS p ON ip.produto_id = p.id
+        JOIN PEDIDOS pe ON ip.pedido_id = pe.numero_pedido
+        WHERE pe.usuario_id = ?
+        ORDER BY pe.data_compra DESC
+    """, (usuario_id,))
+    
+    produtos = cursor.fetchall()
+    conn.close()
+
+    produtos_formatados = []
+    for produto in produtos:
+        produtos_formatados.append({
+            "id": produto["id"],
+            "nome": produto["nome"],
+            "preco": produto["preco"],
+            "quantidade": produto["quantidade"]
+        })
+
+    return produtos_formatados
+
 
 
 def verificar_status_pagamento(numero_pedido):

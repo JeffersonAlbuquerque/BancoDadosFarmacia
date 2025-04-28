@@ -9,12 +9,11 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-DB_PATH = os.path.join("db", "database.db")
 
 
 def init_db():  # inicia o database.
     os.makedirs("db", exist_ok=True)  # Cria pasta se não existir
-    with sqlite3.connect(DB_PATH) as conn:
+    with sqlite3.connect("database.db") as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS CADASTRO(
                 nome TEXT NOT NULL,
