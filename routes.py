@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 import sqlite3
 import bcrypt  # ADICIONADO PARA HASH DA SENHA
 from datetime import datetime
@@ -9,7 +9,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
     @app.route("/")
     def bem_vindo():
         return "<h1>Seja bem vindo!</h1>"
-
 
     @app.route("/cadastro", methods=["POST"])
     def cadastrarUsuario():
@@ -38,7 +37,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
             return jsonify({"sucesso": "Cadastrado com sucesso"}), 201
 
-
     @app.route("/editarUsuario/<cpf>", methods=["PUT"])
     def editarUsuario(cpf):
         dados = request.get_json()
@@ -54,7 +52,8 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
         with sqlite3.connect("database.db") as conn:
             # Verifica se o usuário existe pelo CPF
-            cursor = conn.execute("SELECT * FROM CADASTRO WHERE cpf = ?", (cpf,))
+            cursor = conn.execute(
+                "SELECT * FROM CADASTRO WHERE cpf = ?", (cpf,))
             usuario = cursor.fetchone()
 
             if not usuario:
@@ -69,7 +68,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             conn.commit()
 
             return jsonify({"mensagem": "Dados do usuário atualizados com sucesso!"}), 200
-
 
     @app.route("/usuarios", methods=["GET"])
     def listarUsuarios():
@@ -93,35 +91,52 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
             return jsonify(usuarios_formatados), 200
 
-
     @app.route("/login", methods=["POST"])
     def login():
         dados = request.get_json()
-        email = dados["email"]
-        senha = dados["senha"]
+        email = dados.get("email")
+        senha = dados.get("senha")
 
         with sqlite3.connect("database.db") as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM CADASTRO WHERE email = ?", (email,))
+            cursor.execute("SELECT rowid, * FROM CADASTRO WHERE email = ?", (email,))
             usuario = cursor.fetchone()
 
             if usuario:
                 senha_hash = usuario["senha"]
-                if bcrypt.checkpw(senha.encode('utf-8'), senha_hash.encode('utf-8')):
+                if bcrypt.checkpw(senha.encode("utf-8"), senha_hash.encode("utf-8")):
+                    session["usuario_id"] = usuario["rowid"]
+                    session["email"] = usuario["email"]
+                    session["nome"] = usuario["nome"]
+
                     return jsonify({
                         "sucesso": True,
+                        "mensagem": "Login realizado com sucesso",
                         "usuario": {
+                            "id": usuario["rowid"],
                             "nome": usuario["nome"],
-                            "email": usuario["email"],
-                            "cpf": usuario["cpf"]
+                            "email": usuario["email"]
                         }
-                    })
-                return jsonify({"sucesso": False, "mensagem": "Email ou senha inválidos"}), 401
+                    }), 200
+                else:
+                    return jsonify({"sucesso": False, "mensagem": "Senha incorreta"}), 401
             else:
                 return jsonify({"sucesso": False, "mensagem": "Usuário não encontrado"}), 404
 
 
+    @app.route("/verificarLogin")
+    def verificar_login():
+        if "usuario_id" in session:
+            return jsonify({"logado": True, "usuario": session["nome"]})
+        else:
+            return jsonify({"logado": False}), 401
+    
+    @app.route("/logout")
+    def logout():
+        session.clear()
+        return jsonify({"mensagem": "Logout realizado com sucesso!"})
+    
     @app.route("/trocarSenha/<cpf>", methods=["PUT"])
     def trocarSenha(cpf):
         dados = request.get_json()
@@ -133,7 +148,8 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
         with sqlite3.connect("database.db") as conn:
             # Verifica se o usuário existe
-            cursor = conn.execute("SELECT * FROM CADASTRO WHERE cpf = ?", (cpf,))
+            cursor = conn.execute(
+                "SELECT * FROM CADASTRO WHERE cpf = ?", (cpf,))
             usuario = cursor.fetchone()
 
             if not usuario:
@@ -148,7 +164,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             conn.commit()
 
             return jsonify({"mensagem": "Senha alterada com sucesso!"}), 200
-
 
     @app.route("/cadastrarCategoria", methods=["POST"])
     def cadastrarCategorias():
@@ -165,7 +180,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
         return jsonify({"mensagem": "Categoria cadastrada com sucesso!"}), 201
 
-
     @app.route("/categorias", methods=["GET"])
     def listarCategorias():
         with sqlite3.connect("database.db") as conn:
@@ -181,7 +195,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
                 })
 
         return jsonify(categorias_formatadas), 200
-
 
     @app.route("/cadastrarProdutos", methods=["POST"])
     def cadastrarProdutos():
@@ -223,7 +236,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
         return jsonify({"mensagem": "Produto cadastrado com sucesso!"}), 201
 
-
     @app.route("/editarProduto/<int:id>", methods=["PUT"])
     def editarProduto(id):
         dados = request.get_json()
@@ -259,7 +271,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             conn.commit()
 
             return jsonify({"mensagem": "Produto atualizado com sucesso!"}), 200
-
 
     @app.route("/produtosCadastrados", methods=["GET"])
     def listarProdutos():
@@ -305,7 +316,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
             return jsonify(produtos_formatados), 200
 
-
     @app.route("/deletarProduto/<int:id>", methods=["DELETE"])
     def deletarProduto(id):
         with sqlite3.connect("database.db") as conn:
@@ -319,7 +329,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             conn.commit()
         return jsonify({"mensagem": f"Produto com ID {id} deletado com sucesso!"}), 200
 
-
     @app.route("/adicionarCarrinho", methods=["POST"])
     def adicionarCarrinho():
         dados = request.get_json()
@@ -331,7 +340,8 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             cursor = conn.cursor()
 
             # Verificar se o produto existe
-            cursor.execute("SELECT id FROM PRODUTOS WHERE id = ?", (produto_id,))
+            cursor.execute(
+                "SELECT id FROM PRODUTOS WHERE id = ?", (produto_id,))
             if not cursor.fetchone():
                 return jsonify({"erro": "Produto não encontrado"}), 404
 
@@ -357,8 +367,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
             conn.commit()
             return jsonify({"mensagem": mensagem}), 201
-
-
 
     @app.route("/pedidos/<cpf>", methods=["GET"])
     def listar_pedidos_usuario(cpf):
@@ -395,7 +403,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
             return jsonify(pedidos_formatados), 200
 
-
     def criar_pedido(usuario_id, produtos):
         numero_pedido = gerar_numero_pedido()
         conn = sqlite3.connect('database.db')
@@ -412,7 +419,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             conn.commit()
         except sqlite3.IntegrityError:
             print("Erro: Pedido repetido!")
-
 
     @app.route("/finalizarPedido/<cpf>", methods=["POST"])
     def finalizar_pedido(cpf):
@@ -463,7 +469,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
             return jsonify({"mensagem": "Pedido finalizado!", "numero_pedido": numero_pedido}), 201
 
-
     @app.route("/pedidosStatus/<status>", methods=["GET"])
     def pedidos_por_status(status):
         with sqlite3.connect("database.db") as conn:
@@ -486,13 +491,12 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
             return jsonify(pedidos_formatados), 200
 
-
     @app.route("/cancelarPedido/<numero_pedido>", methods=["PUT"])
     def cancelar_pedido(numero_pedido):
         with sqlite3.connect("database.db") as conn:
             cursor = conn.cursor()
             cursor.execute(
-            "SELECT status_pagamento FROM PEDIDOS WHERE numero_pedido = ?", (numero_pedido,))
+                "SELECT status_pagamento FROM PEDIDOS WHERE numero_pedido = ?", (numero_pedido,))
         pedido = cursor.fetchone()
 
         if not pedido:
@@ -522,7 +526,7 @@ def listar_produtos_usuario(usuario_id):
         WHERE pe.usuario_id = ?
         ORDER BY pe.data_compra DESC
     """, (usuario_id,))
-    
+
     produtos = cursor.fetchall()
     conn.close()
 
@@ -536,7 +540,6 @@ def listar_produtos_usuario(usuario_id):
         })
 
     return produtos_formatados
-
 
 
 def verificar_status_pagamento(numero_pedido):

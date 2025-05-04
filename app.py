@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 import sqlite3
 from flask_cors import CORS
 import bcrypt  # ADICIONADO PARA HASH DA SENHA
@@ -7,6 +7,7 @@ from routes import init_routes
 import os
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)  # Chave secreta para proteger os dados da sessão
 CORS(app)
 
 
