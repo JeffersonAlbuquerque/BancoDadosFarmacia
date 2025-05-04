@@ -124,7 +124,6 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             else:
                 return jsonify({"sucesso": False, "mensagem": "Usuário não encontrado"}), 404
 
-
     @app.route("/verificarLogin")
     def verificar_login():
         if "usuario_id" in session:
@@ -164,6 +163,35 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             conn.commit()
 
             return jsonify({"mensagem": "Senha alterada com sucesso!"}), 200
+
+    @app.route("/usuario_logado", methods=["GET"])
+    def usuario_logado():
+        if "usuario_id" in session:
+            usuario_id = session["usuario_id"]
+
+            with sqlite3.connect("database.db") as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM CADASTRO WHERE rowid = ?", (usuario_id,))
+                usuario = cursor.fetchone()
+
+                if usuario:
+                    usuario_dados = {
+                        "nome": usuario["nome"],
+                        "cpf": usuario["cpf"],
+                        "nascimento": usuario["nascimento"],
+                        "email": usuario["email"],
+                        "celular": usuario["celular"],
+                        "telefone": usuario["telefone"],
+                        "cep": usuario["cep"],
+                        "endereco": usuario["endereco"]
+                    }
+
+                    return jsonify({"usuario": usuario_dados}), 200
+                else:
+                    return jsonify({"erro": "Usuário não encontrado"}), 404
+        else:
+            return jsonify({"erro": "Usuário não logado"}), 401
 
     @app.route("/cadastrarCategoria", methods=["POST"])
     def cadastrarCategorias():
