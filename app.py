@@ -8,7 +8,7 @@ import os
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Chave secreta para proteger os dados da sessão
-CORS(app)
+CORS(app, supports_credentials=True)
 
 
 
