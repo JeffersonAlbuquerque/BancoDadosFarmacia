@@ -12,21 +12,20 @@ def token_required(f):
     def decorated_function(*args, **kwargs):
         token = None
         if 'Authorization' in request.headers:
-            token = request.headers['Authorization'].split(
-                " ")[1]  # Exemplo: "Bearer token"
+            token = request.headers['Authorization'].split(" ")[1]  # Exemplo: "Bearer token"
         if not token:
             return jsonify({'erro': 'Token de autorização ausente'}), 401
 
         try:
-            # Verifique e decodifique o token
             data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            # Isso deve vir do payload do seu token
             current_user_id = data['usuario_id']
-        except:
+        except jwt.ExpiredSignatureError:
+            return jsonify({'erro': 'Token expirado'}), 401
+        except jwt.InvalidTokenError:
             return jsonify({'erro': 'Token inválido'}), 401
 
-            return f(current_user_id, *args, **kwargs)
-        return decorated_function
+        return f(current_user_id, *args, **kwargs)  # <- isso precisa estar FORA do except
+    return decorated_function
     
 def init_routes(app):  # <- Criando a função init_routes(app)
 
