@@ -1,9 +1,33 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 import sqlite3
 import bcrypt  # ADICIONADO PARA HASH DA SENHA
-from datetime import datetime
+from datetime import datetime, timedelta
+import jwt
+from functools import wraps
 
+SECRET_KEY = 'seu_segredo_aqui'
 
+def token_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'].split(
+                " ")[1]  # Exemplo: "Bearer token"
+        if not token:
+            return jsonify({'erro': 'Token de autorização ausente'}), 401
+
+        try:
+            # Verifique e decodifique o token
+            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            # Isso deve vir do payload do seu token
+            current_user_id = data['usuario_id']
+        except:
+            return jsonify({'erro': 'Token inválido'}), 401
+
+            return f(current_user_id, *args, **kwargs)
+        return decorated_function
+    
 def init_routes(app):  # <- Criando a função init_routes(app)
 
     @app.route("/")
@@ -100,19 +124,22 @@ def init_routes(app):  # <- Criando a função init_routes(app)
         with sqlite3.connect("database.db") as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT rowid, * FROM CADASTRO WHERE email = ?", (email,))
+            cursor.execute(
+                "SELECT rowid, * FROM CADASTRO WHERE email = ?", (email,))
             usuario = cursor.fetchone()
 
             if usuario:
                 senha_hash = usuario["senha"]
                 if bcrypt.checkpw(senha.encode("utf-8"), senha_hash.encode("utf-8")):
-                    session["usuario_id"] = usuario["rowid"]
-                    session["email"] = usuario["email"]
-                    session["nome"] = usuario["nome"]
+                    # Gerar o token JWT
+                    expiration = datetime.utcnow() + timedelta(hours=1)  # Token expira em 1 hora
+                    token = jwt.encode(
+                        {"usuario_id": usuario["rowid"], "exp": expiration}, SECRET_KEY, algorithm="HS256")
 
                     return jsonify({
                         "sucesso": True,
                         "mensagem": "Login realizado com sucesso",
+                        "token": token,
                         "usuario": {
                             "id": usuario["rowid"],
                             "nome": usuario["nome"],
@@ -124,18 +151,20 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             else:
                 return jsonify({"sucesso": False, "mensagem": "Usuário não encontrado"}), 404
 
-    @app.route("/verificarLogin")
-    def verificar_login():
-        if "usuario_id" in session:
-            return jsonify({"logado": True, "usuario": session["nome"]})
-        else:
-            return jsonify({"logado": False}), 401
-    
-    @app.route("/logout")
-    def logout():
-        session.clear()
-        return jsonify({"mensagem": "Logout realizado com sucesso!"})
-    
+    @app.route("/verificarLogin", methods=["GET"])
+    @token_required
+    def verificar_login(current_user_id):
+        with sqlite3.connect("database.db") as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT nome FROM CADASTRO WHERE rowid = ?", (current_user_id,))
+            usuario = cursor.fetchone()
+
+            if usuario:
+                return jsonify({"logado": True, "usuario": usuario["nome"]}), 200
+            else:
+                return jsonify({"logado": False}), 404
+
     @app.route("/trocarSenha/<cpf>", methods=["PUT"])
     def trocarSenha(cpf):
         dados = request.get_json()
@@ -165,33 +194,29 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             return jsonify({"mensagem": "Senha alterada com sucesso!"}), 200
 
     @app.route("/usuario_logado", methods=["GET"])
-    def usuario_logado():
-        if "usuario_id" in session:
-            usuario_id = session["usuario_id"]
+    @token_required
+    def usuario_logado(current_user_id):
+        with sqlite3.connect("database.db") as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM CADASTRO WHERE rowid = ?", (current_user_id,))
+            usuario = cursor.fetchone()
 
-            with sqlite3.connect("database.db") as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute("SELECT * FROM CADASTRO WHERE rowid = ?", (usuario_id,))
-                usuario = cursor.fetchone()
-
-                if usuario:
-                    usuario_dados = {
-                        "nome": usuario["nome"],
-                        "cpf": usuario["cpf"],
-                        "nascimento": usuario["nascimento"],
-                        "email": usuario["email"],
-                        "celular": usuario["celular"],
-                        "telefone": usuario["telefone"],
-                        "cep": usuario["cep"],
-                        "endereco": usuario["endereco"]
-                    }
-
-                    return jsonify({"usuario": usuario_dados}), 200
-                else:
-                    return jsonify({"erro": "Usuário não encontrado"}), 404
-        else:
-            return jsonify({"erro": "Usuário não logado"}), 401
+            if usuario:
+                usuario_dados = {
+                    "nome": usuario["nome"],
+                    "cpf": usuario["cpf"],
+                    "nascimento": usuario["nascimento"],
+                    "email": usuario["email"],
+                    "celular": usuario["celular"],
+                    "telefone": usuario["telefone"],
+                    "cep": usuario["cep"],
+                    "endereco": usuario["endereco"]
+                }
+                return jsonify({"usuario": usuario_dados}), 200
+            else:
+                return jsonify({"erro": "Usuário não encontrado"}), 404
 
     @app.route("/cadastrarCategoria", methods=["POST"])
     def cadastrarCategorias():
@@ -236,7 +261,7 @@ def init_routes(app):  # <- Criando a função init_routes(app)
 
         img_url = dados.get("img_url")
         nome = dados.get("nome")
-        categoria_id = dados.get("categoria")  # categoria_id agora!
+        categoria_id = dados.get("categoria_id")  # categoria_id agora!
         fabricante = dados.get("fabricante")
         descricao = dados.get("descricao")
         dosagem = dados.get("dosagem")
