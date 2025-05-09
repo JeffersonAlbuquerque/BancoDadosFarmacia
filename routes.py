@@ -420,6 +420,40 @@ def init_routes(app):  # <- Criando a função init_routes(app)
             conn.commit()
             return jsonify({"mensagem": mensagem}), 201
 
+    @app.route("/carrinho", methods=["GET"])
+    @token_required
+    def carregar_carrinho(current_user_id):
+        with sqlite3.connect("database.db") as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # Buscar os itens do carrinho para o usuário logado
+            cursor.execute("""
+                SELECT C.id, P.id AS produto_id, P.nome, P.img_url, P.preco, C.quantidade
+                FROM CARRINHO C
+                JOIN PRODUTOS P ON C.produto_id = P.id
+                WHERE C.usuario_id = ?
+            """, (current_user_id,))
+            
+            itens_carrinho = cursor.fetchall()
+
+            if not itens_carrinho:
+                return jsonify({"mensagem": "Carrinho vazio"}), 200
+
+            # Formatar os dados dos itens do carrinho
+            carrinho_formatado = []
+            for item in itens_carrinho:
+                carrinho_formatado.append({
+                    "id": item["id"],
+                    "produto_id": item["produto_id"],
+                    "nome": item["nome"],
+                    "img_url": item["img_url"],
+                    "preco": item["preco"],
+                    "quantidade": item["quantidade"]
+                })
+
+            return jsonify({"carrinho": carrinho_formatado}), 200
+
     @app.route("/pedidos/<cpf>", methods=["GET"])
     def listar_pedidos_usuario(cpf):
         with sqlite3.connect("database.db") as conn:
